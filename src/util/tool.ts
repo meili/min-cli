@@ -192,6 +192,7 @@ export function getDestProjectPath (projectName: string, filePath: string = '') 
  * @param {string[]} pkgNames
  */
 export function buildNpmWXCs (pkgNames: string[]) {
+  let items: string[] = []
   let requests = pkgNames.filter(pkgName => {
     let pkgPath = config.getPath('npm.src', pkgName, 'package.json')
 
@@ -206,9 +207,16 @@ export function buildNpmWXCs (pkgNames: string[]) {
       return false
     }
 
+    if (_.get(pkgData, 'minConfig.entry')) {
+      let children: string[] = _.get(pkgData, 'minConfig.entry')
+      children.forEach(item => {
+          items.push(pkgName + '/' + item)
+      })
+    }
     return true
   })
 
+  requests = requests.concat(items)
   let xcxNodes: XcxNode[] = []
 
   requests.forEach(request => {
