@@ -1,5 +1,5 @@
 <template>
-  <wxc-toast></wxc-toast>
+  <wxc-toast class="bg"></wxc-toast>
 </template>
 
 <script>
@@ -14,5 +14,10 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss">
+  $bg: $brandColor;
+
+  .bg {
+    color:  $bg;
+  }
 </style>

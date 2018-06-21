@@ -7,9 +7,9 @@ import { config } from '../util'
 export namespace XcxTraverse {
   export type VisitType = 'start' | 'end' | 'enter' | 'exit' | 'app' | 'page' | 'component' | 'pages' | 'components'
 
-  export type VisitNode<T> = VisitNodeFunction<T> | VisitNodeObject<T>;
+  export type VisitNode<T> = VisitNodeFunction<T> | VisitNodeObject<T>
 
-  export type VisitNodeFunction<T> = (xcxNode: T) => void;
+  export type VisitNodeFunction<T> = (xcxNode: T) => void
 
   export interface VisitNodeObject<T> {
     /**
@@ -38,7 +38,7 @@ export namespace XcxTraverse {
    * @template T
    * @template XcxNode
    */
-  export interface Visitor<T = XcxNode> extends VisitNodeObject<T>{
+  export interface Visitor<T = XcxNode> extends VisitNodeObject<T> {
     /**
      * 开始
      *

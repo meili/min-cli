@@ -2,9 +2,10 @@ import * as url from 'url'
 import * as path from 'path'
 import * as less from 'less'
 import * as postcss from 'postcss'
+import * as sass from 'node-sass'
 import { Depend, Request, WxSFM } from '../class'
 import { RequestType, CompileType } from '../declare'
-import util, { config, Global, ICONFONT_PATTERN } from '../util'
+import util, { config, Global, ICONFONT_PATTERN, log } from '../util'
 import { postcssUnit2rpx } from '../plugin'
 
 /* precss-start */
@@ -85,6 +86,17 @@ export namespace WxSFMStyle {
      * @memberof Options
      */
     compileType?: CompileType
+  }
+
+  /**
+   * Scss 编译配置
+   *
+   * @export
+   * @interface ScssConfig
+   */
+  export interface ScssConfig {
+    data?: string,
+    file?: string
   }
 }
 
@@ -204,6 +216,57 @@ export class WxSFMStyle extends WxSFM {
   }
 
   /**
+   *
+   * 异步的 Sass 编译
+   * @param {*} content
+   * @param {*} file
+   * @returns
+   * @memberof WxSFMStyle
+   */
+  syncSass (content: string, file: string): Promise<string> {
+    let config: WxSFMStyle.ScssConfig = {
+      data: content,
+      file: file
+    }
+    return new Promise(((resolve, reject) => {
+      sass.render(config, (err, res: any) => {
+        if (err) {
+          log.error(err)
+          reject(err)
+        } else {
+          resolve(res.css)
+        }
+      })
+    }))
+  }
+
+  /**
+   * style scss 编译
+   *
+   * @returns
+   * @memberof WxSFMStyle
+   */
+  async compileScss () {
+    if (!this.source) return ''
+
+    let source = ''
+    source = this.source
+
+    // 全局 style 样式
+    source = Global.config.style.scssCode + '\n' + source
+
+    const file = this.request.src
+    source = await this.syncSass(source, file)
+
+    // 经 postcss 编译 unit2px 转换
+    source = await postcss([
+      postcssUnit2rpx
+    ]).process(source).then(result => result.css)
+
+    return source
+  }
+
+  /**
    * 生成代码
    *
    * @returns {Promise<string>}
@@ -216,6 +279,9 @@ export class WxSFMStyle extends WxSFM {
 
       case CompileType.PCSS:
         return await this.compilePcss()
+
+      case CompileType.SCSS:
+        return await this.compileScss()
 
       default:
         return await this.compileStyle()
@@ -298,7 +364,7 @@ export class WxSFMStyle extends WxSFM {
    */
   private initDepends () {
     if (!this.source) return
-    if (this.options.compileType === CompileType.LESS) return
+    if (this.options.compileType === CompileType.LESS || this.options.compileType === CompileType.SCSS) return
 
     let transformer: postcss.Transformer = root => {
       // @import

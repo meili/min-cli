@@ -32,6 +32,7 @@ const config: Config = {
     // }
   },
   alias: {
+    '@': '{{src}}', // 根路径
     'common': '{{src}}/common', // 公共
     'layout': '{{src}}/common/layout', // 布局
     'assets': '{{src}}/common/assets', // 资源
@@ -76,6 +77,7 @@ const config: Config = {
     postcss: '.postcss',
 
     sass: '.sass',
+    scss: '.scss',
     stylus: '.stylus'
   },
   structure: { // 构造器
