@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "author": "lingxiao",
   "license": "MIT",
+  "scripts": {
+    "serve": "../../lib/bin/min.js dev",
+    "build": "../../lib/bin/min.js build"
+  },
   "dependencies": {
     "@minui/wxc-example": "^1.0.0",
     "@minui/wxc-example-demo": "^1.0.0",

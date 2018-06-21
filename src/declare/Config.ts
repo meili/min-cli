@@ -63,7 +63,8 @@ export interface Config extends CustomConfig {
     less: string
     pcss: string
 
-    // sass: '.sass'
+    scss: string
+    sass: string
     // stylus: '.stylus'
 
     [key: string]: string

@@ -5,5 +5,6 @@ export enum CompileType {
 
   // STYLE
   LESS = 'LESS',
-  PCSS = 'PCSS'
+  PCSS = 'PCSS',
+  SCSS = 'SCSS'
 }

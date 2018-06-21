@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "author": "lingxiao",
   "license": "MIT",
+  "scripts": {
+    "serve": "../../lib/bin/min.js dev"
+  },
   "dependencies": {},
   "devDependencies": {
     "babel-plugin-syntax-export-extensions": "^6.13.0",

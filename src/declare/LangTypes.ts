@@ -89,6 +89,14 @@ export const LangTypes: {
     requestType: RequestType.STYLE,
     compileType: CompileType.PCSS
   },
+  [ext.scss]: {
+    requestType: RequestType.STYLE,
+    compileType: CompileType.SCSS
+  },
+  [ext.sass]: {
+    requestType: RequestType.STYLE,
+    compileType: CompileType.SCSS
+  },
 
   // SFC
   [ext.wxa]: {
