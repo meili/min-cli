@@ -1,6 +1,6 @@
 {
   "name": "@minlib/min",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Min2.0 优化原生小程序支持 mixin、wx.api promise化、intercept 拦截器、似vue的computed、watch等",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
