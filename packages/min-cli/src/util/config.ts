@@ -32,6 +32,7 @@ const CUSTOM_CONFIG_MEMBER: string[] = [
   'prefix',// 前缀，如wxc-
   'npm.scope',// 作用域名，如@minui
   'npm.dest',// npm编译后的路径，如dist/packages
+  'originRoutes', // 多文件与单文件混合开发时，获取多文件的 pages 路由
   'projectType'// 项目类型，如component 和 application
 ]
 

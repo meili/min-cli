@@ -172,9 +172,15 @@ module.exports = {
   - 修复 min dev 运行中编译错误被中断问题
   - 支持 min.config.js 配置文件
 
+- **2.0.0-beta.2**
+  - 脚手架升级 2.x 版本
+
+- **2.0.0-beta.3**
+  - 新增 originRoutes 配置，用于多文件与单文件混合开发时，获取多文件的 pages 路由
+
 ## Todo
 
-- **2.0.0-beta.2**
+- **2.0.0-beta.4**
   - 新增 min doctor 指令
 
 ## Tip

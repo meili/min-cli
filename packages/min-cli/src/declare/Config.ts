@@ -23,6 +23,8 @@ export interface CustomConfig {
     dest: string // npm编译后的路径，如dist/packages
   }
   projectType?: string
+
+  originRoutes?: () => string[]
 }
 
 export interface Config extends CustomConfig {

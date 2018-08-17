@@ -255,8 +255,10 @@ export class Global {
       appConfig.subPackages = subPackages
     }
 
+    let originRoutes = config.originRoutes ? config.originRoutes () : []
+
     // this._pages = pages
-    appConfig.pages = pages
+    appConfig.pages = _.union(pages, originRoutes)
     appConfig = _.omit(appConfig, 'usingComponents')
 
     let appConfigCont = JSON.stringify(appConfig, null, 2)
