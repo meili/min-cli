@@ -58,6 +58,17 @@ function getCustomConfig (cwd: string = systemConfig.cwd): { [key: string]: Cust
   // in min.config.json
   if (fs.existsSync(filePath)) {
     customConfigFromFile = _.pick(fs.readJsonSync(filePath), CUSTOM_CONFIG_MEMBER) as CustomConfig
+  } else { // min.config.js
+    let jsConfigFilePath = path.join(path.dirname(filePath), `${path.basename(filePath, '.json')}.js`)
+    let jsConfig = null
+    if (fs.existsSync(jsConfigFilePath)) {
+      try {
+        jsConfig = require(jsConfigFilePath)
+        customConfigFromFile = _.pick(jsConfig, CUSTOM_CONFIG_MEMBER) as CustomConfig
+      } catch (error) {
+        console.error('fail: read config file from min.config.js', error);
+      }
+    }
   }
 
   // merge customConfigFromPkg and customConfigFromFile
