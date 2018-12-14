@@ -64,6 +64,7 @@ export class DevCommand {
 
     // TODO 此处全局污染，待优化
     Global.isDebug = !!pages && pages.length > 0
+    Global.isDev = true
 
     let xcx = new Xcx({
       isClear: clear,

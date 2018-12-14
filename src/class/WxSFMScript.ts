@@ -217,13 +217,29 @@ export class WxSFMScript extends WxSFM {
       transformOptions = _.omit(transformOptions, 'sourceMaps')
     }
 
-    let result = babel.transformFromAst(this.node, this.source, {
-      ast: false,
-      babelrc: false,
-      filename: this.request.src,
-      ...transformOptions
-    })
-    let { code = '' } = result
+    let result;
+    // 调试模式下代码转译时容错, 避免保存代码时有语法问题导致构建进程出错退出
+    if (Global.isDev) {
+      try {
+        result = babel.transformFromAst(this.node, this.source, {
+          ast: false,
+          babelrc: false,
+          filename: this.request.src,
+          ...transformOptions
+        })
+      } catch (error) {
+        log.error(`babel.transformFromAst error: ${error}`)
+        console.error(error)
+      }
+    } else {
+      result = babel.transformFromAst(this.node, this.source, {
+        ast: false,
+        babelrc: false,
+        filename: this.request.src,
+        ...transformOptions
+      })
+    }
+    let { code = '' } = result ? result : {}
     return code
   }
 
@@ -261,6 +277,26 @@ export class WxSFMScript extends WxSFM {
    * @memberof WxSFMScript
    */
   private initNode () {
+    // 调试模式下代码转译时容错, 避免保存代码时有语法问题导致构建进程出错退出
+    if (Global.isDev) {
+      try {
+        this.transformSource();
+      } catch (error) {
+        log.error(`babel.transform error: ${error}`)
+        console.error(error)
+      }
+    } else {
+      this.transformSource();
+    }
+  }
+
+  /**
+   * 根据源码生成 AST 节点树
+   * 
+   * @private
+   * @memberof WxSFMScript
+   */
+  private transformSource () {
     let result = babel.transform(this.source, {
       ast: true,
       babelrc: false
