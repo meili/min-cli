@@ -17,7 +17,7 @@ program
 commands.forEach(command => {
 
   // create command
-  let cmd = program.command(command.name)
+  let cmd = program.command(command.name).allowUnknownOption()
 
   // set alias
   if (command.alias) {
