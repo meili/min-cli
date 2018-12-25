@@ -43,7 +43,11 @@ export namespace Global {
  * @class Global
  */
 export class Global {
+  // dev [name]
+  // https://meili.github.io/min/docs/min-cli/wxc-project/dev/index.html
   static _isDebug: boolean
+  // 只要是 dev 命令即 dev 模式, 与 debug 模式区分开
+  static _isDev: boolean
   static _pages: string[] = []
   static _global: Global
 
@@ -91,6 +95,14 @@ export class Global {
 
   static set isDebug (value: boolean) {
     this._isDebug = value
+  }
+
+  static get isDev () {
+    return this._isDev
+  }
+
+  static set isDev (value: boolean) {
+    this._isDev = value
   }
 
   static get config () {

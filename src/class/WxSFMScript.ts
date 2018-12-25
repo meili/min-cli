@@ -217,13 +217,22 @@ export class WxSFMScript extends WxSFM {
       transformOptions = _.omit(transformOptions, 'sourceMaps')
     }
 
-    let result = babel.transformFromAst(this.node, this.source, {
-      ast: false,
-      babelrc: false,
-      filename: this.request.src,
-      ...transformOptions
-    })
-    let { code = '' } = result
+    let result;
+    // 调试模式下代码转译时容错, 避免保存代码时有语法问题导致构建进程出错退出
+    try {
+      result = babel.transformFromAst(this.node, this.source, {
+        ast: false,
+        babelrc: false,
+        filename: this.request.src,
+        ...transformOptions
+      })
+    } catch (error) {
+      console.error(error)
+      if (!Global.isDev) {
+        throw error
+      }
+    }
+    let { code = '' } = result ? result : {}
     return code
   }
 
@@ -261,13 +270,21 @@ export class WxSFMScript extends WxSFM {
    * @memberof WxSFMScript
    */
   private initNode () {
-    let result = babel.transform(this.source, {
-      ast: true,
-      babelrc: false
-    })
+    try {
+      let result = babel.transform(this.source, {
+        ast: true,
+        babelrc: false
+      })
 
-    let { ast = t.emptyStatement() } = result
-    this.node = ast
+      let { ast = t.emptyStatement() } = result
+      this.node = ast
+    } catch (error) {
+      console.error(error)
+      // 调试模式下代码转译时容错, 避免保存代码时有语法问题导致构建进程出错退出
+      if (!Global.isDev) {
+        throw error
+      }
+    }
   }
 
   /**
@@ -666,14 +683,20 @@ export class WxSFMScript extends WxSFM {
       )
     ])
 
-    let { code: configCode = '' } = babel.transformFromAst(configProgram, '', {
-      code: true,
-      ast: false,
-      babelrc: false
-    })
-
     // run code
-    eval(configCode)
+    try {
+      let { code: configCode = '' } = babel.transformFromAst(configProgram, '', {
+        code: true,
+        ast: false,
+        babelrc: false
+      })
+      eval(configCode)
+    } catch (error) {
+      console.error(error)
+      if (!Global.isDev) {
+        throw error
+      }
+    }
 
     config = config || {}
     config.usingComponents = config.usingComponents || {}
