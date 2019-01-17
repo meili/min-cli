@@ -14,6 +14,13 @@ export namespace BuildCommand {
    * @interface Options
    */
   export interface Options {
+    /**
+     * 是否包含命令行交互式问答
+     *
+     * @type {Boolean}
+     * @memberof Options
+     */
+    hasPrompt?: Boolean
   }
 
   /**
@@ -97,8 +104,10 @@ export class BuildCommand {
       return
     }
 
-    await NpmDest.setAnswer()
-    await BabelES6.setAnswer()
+    if (this.options.hasPrompt) {
+      await NpmDest.setAnswer()
+      await BabelES6.setAnswer()
+    }
 
     util.buildNpmWXCs(pkgNames)
   }
@@ -121,7 +130,9 @@ export default {
     }
   },
   async action (cliOptions: BuildCommand.CLIOptions) {
-    let buildCommand = new BuildCommand()
+    let buildCommand = new BuildCommand({
+      hasPrompt: true
+    })
     await buildCommand.run()
   }
 }

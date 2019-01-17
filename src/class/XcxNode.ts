@@ -1,5 +1,6 @@
-import { Request, WxFile } from '../class'
-import { log, xcxNodeCache, xcxNext } from '../util'
+import * as path from 'path'
+import { Request, WxFile, Depend } from '../class'
+import { log, xcxNodeCache, xcxNext, config, src2destRelative } from '../util'
 
 export namespace XcxNode {
   export interface Options extends Request.Options {
@@ -28,6 +29,14 @@ export namespace XcxNode {
  * @class XcxNode
  */
 export class XcxNode {
+
+  /**
+   * 是否可用
+   *
+   * @type {boolean}
+   * @memberof XcxNode
+   */
+  isAvailable: boolean
 
   /**
    * 请求地址
@@ -80,7 +89,25 @@ export class XcxNode {
       root.children.push(this)
     }
     this.request = request
-    this.wxFile = new WxFile(this.request)
+
+    try {
+      this.wxFile = new WxFile(this.request)
+      this.isAvailable = true
+    } catch (err) {
+      log.error(err)
+
+      // TODO
+      // Add log to app.js
+    }
+
+    if (this.isAvailable) {
+      // 从下一次的编译里移除
+      xcxNext.removeLack(this.request.srcRelative)
+    } else {
+      // 将当前的请求地址记录到Next，用于下一次编译
+      xcxNext.addLack(this.request.srcRelative)
+      return
+    }
 
     this.cached()
     this.recursive()
@@ -125,6 +152,8 @@ export class XcxNode {
    * @memberof XcxNode
    */
   compile () {
+    if (!this.isAvailable) return
+
     this.wxFile.updateDepends(this.useRequests)
     this.wxFile.save()
   }
@@ -146,10 +175,18 @@ export class XcxNode {
    * @memberof XcxNode
    */
   private recursive () {
+    if (!this.isAvailable) return
+
     let depends = this.wxFile.getDepends()
 
     for (let i = 0; i < depends.length; i++) {
-      let { request, requestType } = depends[i]
+      let depend = depends[i]
+      let { request, requestType, isVirtual } = depend
+
+      if (isVirtual) {
+        this.resolveVirtual(depend)
+        return
+      }
 
       // 创建一个节点
       let xcxNode = XcxNode.create({
@@ -161,7 +198,13 @@ export class XcxNode {
         isThreeNpm: this.request.isThreeNpm
       })
 
-      if (xcxNode) {
+      if (!xcxNode) {
+        // 增加缺失的请求
+        this.lackRequests.push({
+          request,
+          requestType
+        })
+      } else if (xcxNode.isAvailable) {
         // 添加可用的请求
         this.useRequests.push({
           request,
@@ -173,14 +216,40 @@ export class XcxNode {
           destRelative: xcxNode.request.destRelative,
           isThreeNpm: xcxNode.request.isThreeNpm
         })
-      } else {
-        // 增加缺失的请求
-        this.lackRequests.push({
-          request,
-          requestType
-        })
       }
     }
+  }
+
+  private resolveVirtual (depend: Depend) {
+    let { request, requestType } = depend
+    let virtualPath = config.resolveVirtual[request]
+    if (!virtualPath) {
+      return
+    }
+    if (!path.isAbsolute(virtualPath)) {
+      virtualPath = path.join(config.cwd, virtualPath)
+    }
+
+    if (!path.extname(virtualPath)) {
+      virtualPath += config.ext.js
+    }
+
+    let src = virtualPath
+    let srcRelative = path.relative(config.cwd, src)
+    let destRelative = src2destRelative(srcRelative)
+    let dest = path.join(config.cwd, destRelative)
+
+    this.useRequests.push({
+      request,
+      requestType,
+      src,
+      srcRelative,
+      ext: config.ext.js,
+      dest,
+      destRelative,
+      isThreeNpm: true,
+      isVirtual: true
+    })
   }
 
   /**

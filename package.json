@@ -1,6 +1,6 @@
 {
   "name": "@mindev/min-cli",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "小程序组件化开发环境，提供 cli 支持",
   "main": "lib/index.js",
   "repository": {
@@ -35,9 +35,9 @@
     "@types/marked": "^0.3.0",
     "@types/node": "^8.0.15",
     "@types/recursive-readdir": "^1.2.28",
-    "tslint": "^5.7.0",
+    "tslint": "^5.9.1",
     "tslint-config-standard": "^6.0.1",
-    "typescript": "^2.4.2"
+    "typescript": "^2.6.2"
   },
   "dependencies": {
     "babel-core": "^6.25.0",

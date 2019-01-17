@@ -5,3 +5,5 @@ package-lock.json
 .idea
 .vscode/
 *.log
+.DS_Store
+/types

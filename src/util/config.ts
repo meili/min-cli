@@ -20,6 +20,8 @@ const CUSTOM_CONFIG_MEMBER: string[] = [
   'packages', // 组件库的路径
   'dest',// 编译后的路径
   'alias', // 别名，如components => src/components
+  'resolveId', // 路径解析配置
+  'resolveVirtual', // 虚拟路径
   'prefix',// 前缀，如wxc-
   'npm.scope',// 作用域名，如@minui
   'npm.dest',// npm编译后的路径，如dist/packages

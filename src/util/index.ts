@@ -21,7 +21,7 @@ export { log, LogType, LogLevel } from './log'
 
 export { md } from './md'
 
-export { resolveDep } from './resolveDep'
+export { resolveDep, src2destRelative } from './resolveDep'
 
 export const ICONFONT_PATTERN = /url\([\'\"]{0,}?([^\'\"]*)[\'\"]{0,}\)/
 

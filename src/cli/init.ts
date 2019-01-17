@@ -1,5 +1,3 @@
-/// <reference path="../..//types/index.d.ts" />
-
 'use strict'
 
 import * as fs from 'fs-extra'
@@ -62,7 +60,6 @@ export namespace InitCommand {
      * @memberof Options
      */
     title: string
-
 
     /**
      * 小程序AppId

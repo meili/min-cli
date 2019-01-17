@@ -1,5 +1,3 @@
-/// <reference path="../..//types/index.d.ts" />
-
 'use strict'
 
 import * as glob from 'glob'
@@ -184,13 +182,13 @@ export class NewCommand {
     // 验证 package 目标地址
     if (fs.existsSync(destPackagePath)) {
       log.output(LogType.ERROR, `创建失败，因为组件 "${pkgName}" 已经存在`, destPackagePath)
-      return
+      return undefined
     }
 
     // 验证 page 目标地址
     if (fs.existsSync(destPagePath)) {
       log.output(LogType.ERROR, `创建失败，因为页面 "${pkgNameSuffix}" 已经存在`, destPagePath)
-      return
+      return undefined
     }
 
     // 将 package 脚手架模板路径下的文件拷贝到 package 目标路径下
@@ -261,7 +259,7 @@ export class NewCommand {
     // 验证 page 目标地址
     if (fs.existsSync(destPagePath)) {
       log.output(LogType.ERROR, `创建失败，因为页面 "${pageName}" 已经存在`, destPagePath)
-      return
+      return undefined
     }
 
     // 将 page 脚手架模板路径下的文件拷贝到 page 目标路径下

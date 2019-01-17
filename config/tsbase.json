@@ -1,17 +1,13 @@
 {
   "compileOnSave": true,
   "compilerOptions": {
-    "target": "es6",
+    "declarationDir": "../types",
+    "target": "es2016",
     "module": "commonjs",
-    "moduleResolution": "node",
     "declaration": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "removeComments": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": false,
-    "sourceMap": false,
-    "inlineSources": false,
-    "suppressImplicitAnyIndexErrors": true
+    "importHelpers": true,
+    "strict": false,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true
   }
 }

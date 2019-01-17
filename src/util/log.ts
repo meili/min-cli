@@ -151,7 +151,8 @@ export const log = {
   fatal (msg: string | Error) {
     this.msg(LogType.FATAL, msg)
   },
-  error (msg: string | Error) {
+  error (err: string | Error) {
+    let msg = _.isString(err) ? err : err.stack
     this.msg(LogType.ERROR, msg)
   },
   warn (msg: string) {

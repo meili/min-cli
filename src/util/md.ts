@@ -6,6 +6,11 @@ const htmlparser = require('htmlparser2')
 const renderer = new marked.Renderer()
 const { DomUtils: domUtils } = htmlparser
 
+export const md = {
+  marked,
+  md2html
+}
+
 // 标签上添加class=`md-tag`
 function tagAddClassName (source: string) {
   let element = dom.make(source)
@@ -54,9 +59,4 @@ function md2html (source: string, isFormat: boolean) {
     source = source.replace(/[ ]{2}/g, '<span class="md--tab"></span>')
   }
   return source
-}
-
-export const md = {
-  marked,
-  md2html
 }

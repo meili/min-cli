@@ -89,14 +89,24 @@ function inAlias (request: string): boolean {
 function getAlias (request: string): {name: string, value: string} | null {
   let spes = request.split('/')
 
-  for (let key in config.alias) {
-    if (spes[0] === key) {
+  for (let i = spes.length; i > 0; i--) {
+    let name = spes.slice(0, i).join('/')
+    if (config.alias[name]) {
       return {
-        name: key,
-        value: config.alias[key]
+        name,
+        value: config.alias[name]
       }
     }
   }
+
+  // for (let key in config.alias) {
+  //   if (spes[0] === key) {
+  //     return {
+  //       name: key,
+  //       value: config.alias[key]
+  //     }
+  //   }
+  // }
   return null
 }
 
@@ -144,49 +154,6 @@ function isWxcPackage (request: string, requestType: RequestType): boolean {
     return false
   }
   return true
-}
-
-function src2destRelative (srcRelative: string, isPublish?: boolean) {
-  // let ext = path.extname(srcRelative)
-  let destRelative = srcRelative
-
-  if (!isPublish) {
-    // source => dist
-    destRelative = destRelative.replace(new RegExp(`^${config.src}`), config.dest)
-  }
-
-  // packages => dist/packages
-  destRelative = destRelative.replace(new RegExp(`^${config.packages}`), (match) => {
-    return config.npm.dest
-  })
-
-  // node_modules => dist/npm/wxcs
-  // path/node_modules => path/npm/wxcs
-  destRelative = destRelative.replace(new RegExp(`(^|\\${path.sep})${config.npm.src}`, 'ig'), (match, $1) => {
-    // let npm = ext === config.ext.wxc ? config.npm.dest.wxcs : config.npm.dest.modules
-    let npmDest = config.npm.dest
-
-    if ($1 === '') {
-      // node_modules => dist/npm/wxcs
-      // node_modules => dist/npm/modules
-      return npmDest
-    } else if ($1 === path.sep) {
-      // path/node_modules => path/npm/wxcs
-      // path/node_modules => path/npm/modules
-      return npmDest.split(path.sep).slice(1).join(path.sep)
-    } else {
-      return match
-    }
-  })
-
-  // /wxc-hello/src/ => /wxc-hello/dist/
-  destRelative = destRelative.replace(new RegExp(`(\\${path.sep}${config.prefixStr}[a-z-]+\\${path.sep})([a-z]+)`), (match, $1, $2) => {
-    if ($2 === config.package.src) {
-      return `${$1}${config.package.dest}`
-    }
-    return match
-  })
-  return destRelative
 }
 
 function getRequestType (ext: string): RequestType | undefined {
@@ -322,13 +289,14 @@ function findPath (request: string, requestType: RequestType, paths: string[], e
     if (curPath === config.cwd) {
       let alias = getAlias(curRequest)
       if (alias) {
-        let spes = curRequest.split('/')
-        spes.shift()
-        spes.unshift(alias.value)
+        curRequest = curRequest.replace(alias.name, alias.value)
+        // let spes = curRequest.split('/')
+        // spes.shift()
+        // spes.unshift(alias.value)
 
         // request = 'components/example' => 'source/components/example'
         // request = '@scope/wxc-hello/src/index' => 'source/packages/wxc-hello/src/index'
-        curRequest = spes.join('/')
+        // curRequest = spes.join('/')
       }
     }
 
@@ -348,6 +316,19 @@ function findPath (request: string, requestType: RequestType, paths: string[], e
     }
 
     let basePath = path.resolve(curPath, curRequest)
+
+    // Resolve ID
+    if (config.resolveId) {
+      // node_modules/@minui/wxc-loading/config.js
+      let relativePath = path.relative(config.cwd, basePath)
+      // dist/config.js
+      let resolvePath = config.resolveId[relativePath]
+      if (resolvePath) {
+        // ~/cwd/dist/config.js
+        basePath = path.join(config.cwd, resolvePath)
+      }
+    }
+
     let filename
     let stat = getStat(basePath)
 
@@ -477,6 +458,49 @@ function resolveLookupPaths (request: string, parent?: string): string[] {
   ]
 }
 
+export function src2destRelative (srcRelative: string, isPublish?: boolean) {
+  // let ext = path.extname(srcRelative)
+  let destRelative = srcRelative
+
+  if (!isPublish) {
+    // source => dist
+    destRelative = destRelative.replace(new RegExp(`^${config.src}`), config.dest)
+  }
+
+  // packages => dist/packages
+  destRelative = destRelative.replace(new RegExp(`^${config.packages}`), (match) => {
+    return config.npm.dest
+  })
+
+  // node_modules => dist/npm/wxcs
+  // path/node_modules => path/npm/wxcs
+  destRelative = destRelative.replace(new RegExp(`(^|\\${path.sep})${config.npm.src}`, 'ig'), (match, $1) => {
+    // let npm = ext === config.ext.wxc ? config.npm.dest.wxcs : config.npm.dest.modules
+    let npmDest = config.npm.dest
+
+    if ($1 === '') {
+      // node_modules => dist/npm/wxcs
+      // node_modules => dist/npm/modules
+      return npmDest
+    } else if ($1 === path.sep) {
+      // path/node_modules => path/npm/wxcs
+      // path/node_modules => path/npm/modules
+      return path.join(path.sep, npmDest.split(path.sep).slice(1).join(path.sep))
+    } else {
+      return match
+    }
+  })
+
+  // /wxc-hello/src/ => /wxc-hello/dist/
+  destRelative = destRelative.replace(new RegExp(`(\\${path.sep}${config.prefixStr}[a-z-]+\\${path.sep})([a-z]+)`), (match, $1, $2) => {
+    if ($2 === config.package.src) {
+      return `${$1}${config.package.dest}`
+    }
+    return match
+  })
+  return destRelative
+}
+
 export function resolveDep (requestOptions: Request.Options): Request.Core {
   let {
     request,
@@ -532,7 +556,7 @@ export function resolveDep (requestOptions: Request.Options): Request.Core {
     dest = path.join(config.cwd, destRelative)
 
     // 判定是否来自第三方NPM（NPM包中非WXC的都定位为第三方NPM包，主要是不走编译）
-    if (srcRelative.split('/')[0] === 'node_modules') {
+    if (srcRelative.split(path.sep)[0] === 'node_modules') {
       if (rawRequest.charAt(0) === '.') { // 引用相对路径，继承父级
         $isThreeNpm = isThreeNpm
       } else if (ext !== config.ext.wxc) { // 所有的NPM包中，引用路径扩展非.wxc，都定位第三方NPM包

@@ -1,6 +1,7 @@
 import { spawn, SpawnOptions } from 'child_process'
 
 export interface ExecResult {
+  code: number,
   stderr: string
   stdout: string
 }
@@ -38,6 +39,7 @@ export function exec (command: string, args: string[], verbose: boolean = false,
       // }
 
       resolve({
+        code,
         stdout: stdout.trim(),
         stderr: stderr.trim()
       })

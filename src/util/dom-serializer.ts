@@ -159,7 +159,7 @@ const unencodedElements = {
   Format attributes
 */
 function formatAttrs (attributes: any, opts: any) {
-  if (!attributes) return
+  if (!attributes) return undefined
 
   let output = ''
   let value

@@ -11,9 +11,13 @@ import util, { config, log, LogType, md, Global } from '../util'
 import t = babel.types
 import NodePath = traverse.NodePath
 
+const GLOBAL_MIN_KEY = 'globalMin'
 const CONFIG_KEY = 'config'
+const MIXINS_KEY = 'mixins'
 const DATA_KEY = 'data'
 const PATH_SEP = path.sep
+
+let $path = path
 
 export namespace WxSFMScript {
 
@@ -55,6 +59,14 @@ export namespace WxSFMScript {
   export interface UsingComponents {
     [key: string]: string
   }
+
+  export interface GlobalMin {
+    config: {
+      usingComponents: UsingComponents
+    },
+    mixins: string[],
+    requestDeclaration: (t.ImportDeclaration | t.VariableDeclarator)[]
+  }
 }
 
 /**
@@ -86,6 +98,14 @@ export class WxSFMScript extends WxSFM {
    */
   private config: WxSFMScript.Config = Object.create(null)
 
+  private globalMin: WxSFMScript.GlobalMin = {
+    config: {
+      usingComponents: {}
+    },
+    mixins: [],
+    requestDeclaration: []
+  }
+
   /**
    * 依赖列表
    *
@@ -107,14 +127,7 @@ export class WxSFMScript extends WxSFM {
       destExt: request.ext === config.ext.wxs ? config.ext.wxs : config.ext.js
     })
 
-    if (this.isWxp) { // 继承 app 全局的模板组件
-      this.config = _.merge({}, this.config, {
-        usingComponents: Global.layout.app.usingComponents
-      })
-
-      this.addWXCDepends(this.config.usingComponents)
-    }
-
+    this.initConfig()
     this.initNode()
     this.traverse()
   }
@@ -136,7 +149,20 @@ export class WxSFMScript extends WxSFM {
    * @memberof WxSFMScript
    */
   getUsingComponents () {
-    return this.config.usingComponents || {}
+    let { usingComponents = {} } = this.config
+    return usingComponents
+  }
+
+  getGlobalMin () {
+    if (!this.isWxa) return
+
+    let { config } = this.globalMin
+    let { usingComponents = {} } = config
+    let { usingComponents: usingComponents2 = {} } = this.config
+
+    _.merge(usingComponents, _.cloneDeep(usingComponents2))
+
+    return this.globalMin
   }
 
   /**
@@ -254,6 +280,20 @@ export class WxSFMScript extends WxSFM {
     this.saveConfigFile()
   }
 
+  private initConfig () {
+    if (!this.isWxp) return
+
+    let { globalMin } = Global.layout.app
+    let { config } = globalMin
+    let { usingComponents } = config
+
+    this.config = _.merge({}, this.config, {
+      usingComponents
+    })
+
+    this.addWXCDepends(this.config.usingComponents)
+  }
+
   /**
    * 初始化 AST 节点树
    *
@@ -278,12 +318,16 @@ export class WxSFMScript extends WxSFM {
    */
   private traverse () {
     let visitor: babel.Visitor = {
+      Program: (path) => {
+        this.createMixinsDeclaration(path)
+      },
       // import hello from './hello
       ImportDeclaration: (path) => {
         this.visitDepend(path)
       },
       CallExpression: (path) => {
         this.visitDepend(path)
+        this.createMixinsProperties(path)
       },
       ExportDefaultDeclaration: (path) => {
         // this.hasExportDefault = true
@@ -294,6 +338,7 @@ export class WxSFMScript extends WxSFM {
       ObjectProperty: (path) => {
         this.visitMarkdown(path)
         this.visitConfig(path)
+        this.visitGlobalMin(path)
       }
     }
     babel.traverse(this.node, visitor)
@@ -301,34 +346,34 @@ export class WxSFMScript extends WxSFM {
 
   private checkUseModuleExports (path: NodePath<t.ObjectExpression>): boolean | undefined {
     if (!this.isSFC) {
-      return
+      return undefined
     }
 
     // the parent is module.exports = {}; exports.default = {}
     if (!t.isAssignmentExpression(path.parent)) {
-      return
+      return undefined
     }
 
     let { left, operator } = path.parent
 
     if (operator !== '=') {
-      return
+      return undefined
     }
 
     // left => module.exports or exports.default
     // operator => =
     // right => { ... }
     if (!t.isMemberExpression(left)) {
-      return
+      return undefined
     }
 
     if (!t.isIdentifier(left.object) || !t.isIdentifier(left.property)) {
-      return
+      return undefined
     }
 
     let expression = `${left.object.name}.${left.property.name}`
     if (expression !== 'module.exports' && expression !== 'exports.default') {
-      return
+      return undefined
     }
 
     return true
@@ -343,12 +388,12 @@ export class WxSFMScript extends WxSFM {
    */
   private checkUseExportDefault (path: NodePath<t.ObjectExpression>): boolean | undefined {
     if (!this.isSFC) {
-      return
+      return undefined
     }
 
     // the parent is export default
     if (!t.isExportDefaultDeclaration(path.parent)) {
-      return
+      return undefined
     }
 
     return true
@@ -490,20 +535,288 @@ export class WxSFMScript extends WxSFM {
    * @memberof WxSFMScript
    */
   private visitDepend (path: NodePath<t.ImportDeclaration | t.CallExpression>) {
-    if (t.isImportDeclaration(path.node)) { // import
-      let { source: $node } = path.node
+    // Extract import declaration
+    let extractImport = (node: t.ImportDeclaration): Boolean => {
+      let { source: $node } = node
+
+      // Add a dependency.
       this.addNativeDepends($node)
-    } else if (t.isCallExpression(path.node)) { // require
-      let { callee, arguments: args } = path.node
+
+      return true
+    }
+
+    // Extract require declaration
+    let extractRequire = (node: t.CallExpression): Boolean => {
+      let { callee, arguments: args } = node
+
+      // It must be the require function, with parameters.
       if (!(t.isIdentifier(callee) && callee.name === 'require' && args.length > 0)) {
-        return
+        return false
       }
 
+      // For example, from the first parameter of require('xxx').
       let $node = args[0]
-      if (t.isStringLiteral($node)) {
-        this.addNativeDepends($node)
-      }
+
+      // Must be a string type.
+      if (!t.isStringLiteral($node)) return false
+
+      // Add a dependency.
+      this.addNativeDepends($node)
+
+      return true
     }
+
+    // Add request declaration
+    let addRequestDeclaration = () => {
+      let { requestDeclaration } = this.globalMin
+      let { node, parent } = path
+      let $node = null
+
+      if (t.isImportDeclaration(node)) {
+        $node = node
+      }
+
+      if (t.isCallExpression(node) && t.isVariableDeclarator(parent)) {
+        $node = parent
+      }
+
+      if (!$node) return
+
+      // Add a request declaration
+      requestDeclaration.push($node)
+    }
+
+    let { node } = path
+
+    // For import
+    if (t.isImportDeclaration(node)) {
+      let isContinue = extractImport(node)
+
+      if (!isContinue) return
+
+      // Add request declaration
+      addRequestDeclaration()
+      return
+    }
+
+    // For require
+    if (t.isCallExpression(node)) {
+      let isContinue = extractRequire(node)
+
+      if (!isContinue) return
+
+      // Add request declaration
+      addRequestDeclaration()
+      return
+    }
+  }
+
+  /**
+   * Create or attach the mixins properties.
+   * For WXP
+   *
+   * @private
+   * @param {NodePath<t.CallExpression>} path
+   * @memberof WxSFMScript
+   */
+  private createMixinsProperties (path: NodePath<t.CallExpression>) {
+    if (!this.isWxp) return
+
+    let { node: { callee, arguments: args } } = path
+    if (!t.isMemberExpression(callee)) return
+    if (!args || args.length === 0) return
+
+    // For Example：
+    // object.name is min
+    // property.name is Page
+    let { object, property } = callee
+    if (!t.isIdentifier(object) || !t.isIdentifier(property)) return
+
+    let caller = `${object.name}.${property.name}`
+    // The mixins function is valid only in min.Page.
+    if (caller !== 'min.Page') return
+
+    let arg = args[0]
+    // The first argument must be the ObjectExpression.
+    if (!t.isObjectExpression(arg)) return
+
+    let { properties } = arg
+
+    // Get the mixins properties.
+    let prop = properties.find(prop => {
+      if (!t.isObjectProperty(prop)) return false
+
+      let keyField = getKeyOrValueFieldByExpression(prop.key)
+
+      if (keyField === MIXINS_KEY) return true
+    })
+
+    let { mixins } = Global.layout.app.globalMin
+
+    // Create an arrayExpression.
+    // For example：[mixin1, mixin2]
+    let arrExp = t.arrayExpression(mixins.map(mixin => {
+      return t.identifier(mixin)
+    }))
+
+    // The mixins property already exists.
+    if (prop && t.isObjectProperty(prop)) {
+      let { value } = prop
+      if (!t.isArrayExpression(value)) return
+
+      // Extend the new value from the existing mixins attribute.
+      // For example：[newMixin1, newMixin2, oldMixin1, oldMixin2]
+      value.elements = [
+        ...arrExp.elements,
+        ...value.elements
+      ]
+    } else {
+      // Create a mixins attribute.
+      // For example：{mixins: [mixin1, mixin2]}
+      prop = t.objectProperty(t.identifier(MIXINS_KEY), arrExp)
+      properties.push(prop)
+    }
+  }
+
+  /**
+   * Create or attach the mixins declaration.
+   * For WXP
+   *
+   * @private
+   * @param {NodePath<t.Program>} path
+   * @memberof WxSFMScript
+   */
+  private createMixinsDeclaration (path: NodePath<t.Program>) {
+    if (!this.isWxp) return
+
+    // For import Declaration
+    // Example:
+    // 1. import mixin from 'mixins/xxx'
+    // 2. import { mixin1, mixin2 } from 'mixins/xxx'
+    let importDecl = (mixin: string, decl: t.ImportDeclaration) => {
+
+      // specifiers => [mixin, mixin1, mixin2]
+      // source => mixins/xxx
+      let { specifiers, source } = decl
+
+      // Find a name that is the same as specifiers.
+      let spe = specifiers.find(spe => {
+        let { local: { name } } = spe
+        return name === mixin
+      })
+
+      if (!spe) return
+
+      let newSpecifiers = [spe]
+      let newSource = resolvePath(source.value)
+      let newImportDeclaration = t.importDeclaration(newSpecifiers, newSource)
+
+      // Insert the top of the body.
+      body.unshift(newImportDeclaration)
+    }
+
+    // For require Declaration
+    // Example:
+    // 1. const mixn = require('mixins/xxx')
+    // 2. const { mixin1, mixin2 } = require('mixins/xxx')
+    // 3. const { mixin2: mixin22 } = require('mixins/xxx')
+    let requireDecl = (mixin: string, decl: t.VariableDeclarator) => {
+      let { id, init } = decl
+
+      if (!t.isCallExpression(init)) return
+      if (!init.arguments.length) return
+
+      // Get first argument，Ignore other arguments
+      // For example: 'mixins/xxx'
+      let fistArgument = init.arguments[0]
+
+      if (!t.isStringLiteral(fistArgument)) return
+
+      let newDeclarations = []
+
+      // Get the resolved require path.
+      // For example: ['~/mixins/xxx']
+      let newArguments = [resolvePath(fistArgument.value)]
+      // For example: require('~/mixns/xxx')
+      let newInit = t.callExpression(init.callee, newArguments)
+
+      // ①
+      // For example:
+      // id => { mixin1 }
+      // id => { mixin2: mixin22 }
+      if (t.isObjectPattern(id)) {
+        let { properties } = id
+
+        // Find a name that is the same a properties.
+        let prop = properties.find(prop => {
+          if (!t.isObjectProperty(prop)) return false
+
+          // Get mixin22 from { mixin2: mixin22 }
+          let valueField = getKeyOrValueFieldByExpression(prop.value)
+          return valueField === mixin
+        })
+
+        if (!prop) return
+
+        // Create an objectPattern
+        let newId = t.objectPattern([prop])
+        newDeclarations = [t.variableDeclarator(newId, newInit)]
+      }
+
+      // ②
+      // For example:
+      // id => mixin
+      if (t.isIdentifier(id) && id.name === mixin) {
+        // Use the original id
+        let newId = id
+        newDeclarations = [t.variableDeclarator(newId, newInit)]
+      }
+
+      if (newDeclarations.length === 0) return
+
+      let newVariableDeclaration = t.variableDeclaration('const', newDeclarations)
+
+      // Insert the top of the body.
+      body.unshift(newVariableDeclaration)
+    }
+
+    // The require path of the mixins is resolved.
+    let resolvePath = (requirePath: string): t.StringLiteral => {
+      if (requirePath.charAt(0) === '.') {
+        let { request: appRequest } = Global.layout.app
+        let { src: appFilePath } = appRequest
+        let { src: curFilePath } = this.request
+
+        // The relative path from the current file to the app file.
+        // For example:
+        // from ~/src/pages/home/index.wxp
+        // to   ~/src/app.wxa
+        let relativePath = $path.relative($path.dirname(curFilePath), $path.dirname(appFilePath))
+
+        // For example: ../../
+        requirePath = $path.join(relativePath, requirePath)
+      }
+      return t.stringLiteral(requirePath)
+    }
+
+    let { node: { body } } = path
+
+    let { globalMin } = Global.layout.app
+    let { mixins, requestDeclaration } = globalMin
+
+    mixins.forEach(mixin => {
+      requestDeclaration.forEach(decl => {
+        if (t.isImportDeclaration(decl)) {
+
+          importDecl(mixin, decl)
+        }
+
+        if (t.isVariableDeclarator(decl)) {
+
+          requireDecl(mixin, decl)
+        }
+      })
+    })
   }
 
   /**
@@ -514,17 +827,14 @@ export class WxSFMScript extends WxSFM {
    * @memberof WxSFMScript
    */
   private visitConfig (path: NodePath<t.ObjectProperty>) {
-    if (!this.isSFC) {
-      return
-    }
+    if (!this.isSFC) return
 
-    let config = this.transfromConfig(path.node)
+    let { node, parent } = path
+    let $config = getConfigObjectByNode(node)
 
-    if (!config) {
-      return
-    }
+    if (!$config) return
 
-    this.config = _.merge({}, this.config, config)
+    this.config = _.merge({}, this.config, $config)
 
     this.addWXCDepends(this.config.usingComponents)
 
@@ -552,6 +862,87 @@ export class WxSFMScript extends WxSFM {
     // path.remove()
   }
 
+  private visitGlobalMin (path: NodePath<t.ObjectProperty>) {
+    let { node } = path
+
+    if (!this.isWxa) return
+    if (!node) return
+
+    // Extract config from globalMix.
+    let extractConfig = (prop: t.ObjectProperty) => {
+      let $config = getConfigObjectByNode(prop)
+      let { config } = this.globalMin
+
+      // Merge the config properties to globalMin.
+      _.merge(config, $config)
+    }
+
+    // Extract mixins from globalMix.
+    let extractMixins = (prop: t.ObjectProperty) => {
+
+      if (!t.isArrayExpression(prop.value)) {
+        log.warn('mixins 属性不是一个 ArrayExpression 类型')
+        return
+      }
+
+      // Register the list of elements for mixins.
+      let { elements } = prop.value
+      let { mixins } = this.globalMin
+
+      let $mixins = elements.map(elem => {
+        if (!t.isIdentifier(elem)) {
+          log.warn(`mixins 中包含非 Identifier 类型的元素`)
+          return
+        }
+        return elem.name
+      }).filter(elem => !!elem)
+
+      $mixins.forEach(mixin => mixins.push(mixin))
+    }
+
+    let { key, value } = node
+    let keyField = getKeyOrValueFieldByExpression(key)
+
+    if (GLOBAL_MIN_KEY !== keyField) {
+      return undefined
+    }
+
+    if (!value || value.type !== 'ObjectExpression') {
+      return undefined
+    }
+
+    // { config: {}, mixins: []}
+    let { properties } = value
+
+    properties.forEach(prop => {
+
+      if (!t.isObjectProperty(prop)) return
+
+      // Get the key field name from globalMix.
+      let keyField = getKeyOrValueFieldByExpression(prop.key)
+
+      switch (keyField) {
+        case CONFIG_KEY:
+          extractConfig(prop)
+          break
+
+        case MIXINS_KEY:
+          extractMixins(prop)
+          break
+      }
+    })
+
+    _.merge(this.globalMin, {
+      config: {
+        usingComponents: {}
+      },
+      mixins: [],
+      requestDeclaration: []
+    })
+
+    path.remove()
+  }
+
   /**
    * 添加WXC依赖
    *
@@ -560,11 +951,12 @@ export class WxSFMScript extends WxSFM {
    * @memberof WxSFMScript
    */
   private addWXCDepends (usingComponents?: WxSFMScript.UsingComponents) {
-    if (!usingComponents) {
-      return
-    }
+    if (!usingComponents) return
 
     if (this.isWxc || this.isWxp) { // 组件 & 页面
+
+      // TODO There is duplication of dependency.
+
       _.forIn(usingComponents, (value, key) => {
         this.depends.push({ // 'wxc-loading' => '@scope/wxc-loading'
           request: value,
@@ -593,10 +985,12 @@ export class WxSFMScript extends WxSFM {
         $node
       })
     } else {
+      let isVirtual = !!config.resolveVirtual[request]
       this.depends.push({
         request,
         requestType: RequestType.SCRIPT,
-        $node
+        $node,
+        isVirtual
       })
     }
   }
@@ -625,72 +1019,13 @@ export class WxSFMScript extends WxSFM {
   }
 
   /**
-   * 将 AST节点 转换成 config 配置对象
-   *
-   * @private
-   * @param {t.Node} node AST节点
-   * @returns {(WxSFMScript.Config | undefined)}
-   * @memberof WxSFMScript
-   */
-  private transfromConfig (node: t.Node): WxSFMScript.Config | undefined {
-    if (!t.isObjectProperty(node)) {
-      return
-    }
-
-    let { key, value } = node
-    let configKey = ''
-
-    if (t.isIdentifier(key)) { // {config: {key, value}}
-      configKey = key.name
-    } else if (t.isStringLiteral(key)) { // {'config': {key, value}}
-      configKey = key.value
-    }
-
-    if (CONFIG_KEY !== configKey) {
-      return
-    }
-
-    if (!value) {
-      return
-    }
-
-    if (!t.isObjectExpression(value)) {
-      log.warn('config 属性不是一个ObjectExpression')
-      return
-    }
-
-    let config: WxSFMScript.Config = {}
-    let configProgram = t.program([
-      t.expressionStatement(
-        t.assignmentExpression('=', t.identifier('config'), value) // config = value
-      )
-    ])
-
-    let { code: configCode = '' } = babel.transformFromAst(configProgram, '', {
-      code: true,
-      ast: false,
-      babelrc: false
-    })
-
-    // run code
-    eval(configCode)
-
-    config = config || {}
-    config.usingComponents = config.usingComponents || {}
-
-    return config
-  }
-
-  /**
    * 将 wxp wxa 单文件中 script 模块的 config 属性值提取并过滤 并保存到 file.json 中
    *
    * @private
    * @memberof WxSFMScript
    */
   private saveConfigFile () {
-    if (!this.isWxp && !this.isWxc) {
-      return
-    }
+    if (!this.isWxp && !this.isWxc) return
 
     let configCopy = _.cloneDeep(this.config)
 
@@ -703,6 +1038,77 @@ export class WxSFMScript extends WxSFM {
     log.msg(LogType.WRITE, dester.destRelative)
     util.writeFile(dester.dest, JSON.stringify(configCopy, null, 2))
   }
+}
+
+/**
+ * Get key or value field name By t.Expression
+ *
+ * @param {t.Expression} keyOrValue
+ * @returns {(string | undefined)}
+ */
+function getKeyOrValueFieldByExpression (keyOrValue: t.Expression): string | undefined {
+  // Example {config: {key, value}}
+  if (t.isIdentifier(keyOrValue)) {
+    return keyOrValue.name
+  }
+
+  // Example {'config': {key, value}}
+  if (t.isStringLiteral(keyOrValue)) {
+    return keyOrValue.value
+  }
+
+  return ''
+}
+
+/**
+ * Get the config object through the node of Babel.
+ *
+ * @private
+ * @param {t.ObjectProperty} prop
+ * @returns {(WxSFMScript.Config | undefined)}
+ */
+function getConfigObjectByNode (prop: t.ObjectProperty): WxSFMScript.Config | undefined {
+  // if (!t.isObjectProperty(node)) {
+  //   return undefined
+  // }
+
+  let { key, value } = prop
+  let keyField = getKeyOrValueFieldByExpression(key)
+
+  if (CONFIG_KEY !== keyField) {
+    return undefined
+  }
+
+  if (!value) {
+    return undefined
+  }
+
+  if (!t.isObjectExpression(value)) {
+    log.warn('config 属性不是一个 ObjectExpression 类型')
+    return undefined
+  }
+
+  let $config: WxSFMScript.Config = {}
+
+  // Create ast
+  let configProgram = t.program([
+    t.expressionStatement(
+      t.assignmentExpression('=', t.identifier('$config'), value) // config = value
+    )
+  ])
+
+  let { code: configCode = '' } = babel.transformFromAst(configProgram, '', {
+    code: true,
+    ast: false,
+    babelrc: false
+  })
+
+  // Execute the code and export a $config object.
+  eval(configCode)
+
+  return _.merge($config, {
+    usingComponents: {}
+  })
 }
 
 // 设置 config 的 usingComponents 的属性

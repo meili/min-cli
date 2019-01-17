@@ -1,3 +1,28 @@
+export interface CustomConfig {
+  compilers?: any
+  style?: {
+    [key: string]: string | { [key: string]: string | Function | boolean | number }
+  }
+  src?: string // 源代码的路径
+  packages?: string // 组件库的路径
+  dest?: string// 编译后的路径
+  alias?: {
+    [key: string]: string
+  } // 别名，如components => src/components
+  resolveId?: {
+    [key: string]: string
+  }
+  resolveVirtual?: {
+    [key: string]: string
+  }
+  prefix?: string// 前缀，如wxc-
+  npm?: {
+    scope: string // 作用域名，如@minui
+    dest: string // npm编译后的路径，如dist/packages
+  }
+  projectType?: string
+}
+
 export interface Config extends CustomConfig {
   title: string
   cli: string
@@ -106,23 +131,4 @@ export interface Config extends CustomConfig {
     // file: string
     // xcxast: string
   }
-}
-
-export interface CustomConfig {
-  compilers?: any
-  style?: {
-    [key: string]: string | { [key: string]: string | Function | boolean | number }
-  }
-  src?: string // 源代码的路径
-  packages?: string // 组件库的路径
-  dest?: string// 编译后的路径
-  alias?: {
-    [key: string]: string
-  } // 别名，如components => src/components
-  prefix?: string// 前缀，如wxc-
-  npm?: {
-    scope: string // 作用域名，如@minui
-    dest: string // npm编译后的路径，如dist/packages
-  }
-  projectType?: string
 }

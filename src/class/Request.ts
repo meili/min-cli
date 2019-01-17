@@ -83,6 +83,14 @@ export namespace Request {
      * @memberof Default
      */
     requestType: RequestType
+
+    /**
+     * 虚拟文件
+     *
+     * @type {Boolean}
+     * @memberof Default
+     */
+    isVirtual?: Boolean
   }
 
   /**
@@ -150,7 +158,7 @@ export namespace Request {
    * @extends {Request.Default} 基础
    * @extends {Request.Path} 路径
    */
-  export interface Core extends Request.Default, Request.Path {}
+  export interface Core extends Default, Path {}
 
   /**
    * 扩展
@@ -321,6 +329,7 @@ export namespace Request {
     isStyle: boolean
 
     isPng: boolean
+    isJpg: boolean
     isJpeg: boolean
     isGif: boolean
     isBmp: boolean
@@ -407,6 +416,7 @@ export class RequestExtend extends RequestCore implements Request.Extend {
   isWxs: boolean
 
   isPng: boolean
+  isJpg: boolean
   isJpeg: boolean
   isGif: boolean
   isBmp: boolean
@@ -500,7 +510,7 @@ export class RequestExtend extends RequestCore implements Request.Extend {
    * @memberof RequestExtend
    */
   get isImage () {
-    return this.isPng || this.isJpeg || this.isGif || this.isBmp || this.isWebp
+    return this.isPng || this.isJpg || this.isJpeg || this.isGif || this.isBmp || this.isWebp
   }
 
   /**

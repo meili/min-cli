@@ -1,9 +1,16 @@
 {
+  "miniprogramRoot": "<%= dest %>",
 	"description": "项目配置文件。",
 	"compileType": "miniprogram",
-	"libVersion": "1.7.1",
+	"libVersion": "1.9.1",
 	"appid": "<%= appId %>",
 	"projectname": "<%= title %>",
-	"setting": {},
+  "setting": {
+		"urlCheck": true,
+		"es6": false,
+		"postcss": true,
+		"minified": true,
+		"newFeature": true
+	},
 	"condition": {}
 }

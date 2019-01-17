@@ -42,6 +42,8 @@ const config: Config = {
     // 默认由 util.config 实现
     // [scope]: '{{packages}}' // 组件库
   },
+  resolveId: {},
+  resolveVirtual: {},
   ext: { // 扩展名
     // 单文件
     wxc: '.wxc',

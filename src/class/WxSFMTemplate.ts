@@ -2,7 +2,7 @@ import * as path from 'path'
 import * as changeCase from 'change-case'
 import { Depend, Request, WxSFM } from '../class'
 import { CompileType } from '../declare'
-import util, { config, dom, beautifyHtml, Global, getOuterHTML } from '../util'
+import util, { config, dom, log, beautifyHtml, Global, getOuterHTML } from '../util'
 import { RequestType } from '../declare/RequestType'
 
 const htmlparser = require('htmlparser2')
@@ -192,8 +192,15 @@ export class WxSFMTemplate extends WxSFM {
 
     let { usingComponents = {} } = this.options
 
-    // 只有.wxp页面才可以使用公共模板
-    let source = !this.isWxp ? this.source : Global.layout.app.template.replace(config.layout.placeholder, this.source)
+    let source = this.source
+
+    if (this.isWxp) { // 只有.wxp页面才可以使用公共模板
+      let { template } = Global.layout.app
+      let { placeholder } = config.layout
+      source = template.indexOf(placeholder) !== -1
+        ? template.replace(placeholder, this.source)
+        : this.source
+    }
 
     this.dom = dom.make(source)
 
@@ -213,6 +220,12 @@ export class WxSFMTemplate extends WxSFM {
     }, this.exampleElem, true, [])
   }
 
+  /**
+   * Init Depends
+   *
+   * @private
+   * @memberof WxSFMTemplate
+   */
   private initDepends () {
     if (!this.dom) {
       return
@@ -223,52 +236,74 @@ export class WxSFMTemplate extends WxSFM {
 
     // import tag
     importElems.forEach((elem: any) => {
-      let { src } = elem.attribs
-      if (!src) {
-        return
-      }
-      this.depends.push({
-        request: src,
-        requestType: RequestType.TEMPLATE,
-        $elem: elem
-      })
+      this.addDepend(elem, RequestType.TEMPLATE)
     })
 
     // image tag
     imageElems.forEach((elem: any) => {
-      let { src } = elem.attribs
-      if (!src) {
-        return
-      }
-
-      // Check local image
-      if (!util.checkLocalImgUrl(src)) {
-        return
-      }
-
-      // Ignore {{}}
-      if (/\{\{/.test(src)) {
-        return
-      }
-
-      this.depends.push({
-        request: src,
-        requestType: RequestType.IMAGE,
-        $elem: elem
-      })
+      this.addDepend(elem, RequestType.IMAGE)
     })
 
     // wxs tag
     wxsElems.forEach((elem: any) => {
+      this.addDepend(elem, RequestType.WXS)
+    })
+
+    // custom tag
+    this.customElems.forEach((elem: any) => {
       let { src } = elem.attribs
       if (!src) {
         return
       }
-      this.depends.push({
-        request: src,
-        requestType: RequestType.WXS,
-        $elem: elem
-      })
+      let extName = path.extname(src)
+      switch (extName) {
+        case config.ext.png:
+        case config.ext.jpg:
+        case config.ext.jpeg:
+        case config.ext.gif:
+        case config.ext.webp:
+          this.addDepend(elem, RequestType.IMAGE)
+          break
+
+        case '':
+          log.warn(`Unknown file extension: "${src}", It is the SRC attribute of the <${elem.name}/> tag, in ${this.request.srcRelative}`)
+          break
+
+        default:
+          log.warn(`Unable to match the file extension: "${src}", It is the SRC attribute of the <${elem.name}/> tag, in ${this.request.srcRelative}`)
+          break
+      }
+    })
+  }
+
+  /**
+   * Add Depend
+   *
+   * @private
+   * @param {*} elem
+   * @param {*} requestType
+   * @memberof WxSFMTemplate
+   */
+  private addDepend (elem: any, requestType: any) {
+    let { src } = elem.attribs
+    if (!src) {
+      return
+    }
+
+    // Check local file
+    if (!util.checkLocalFile(src)) {
+      return
+    }
+
+    // Ignore {{}}
+    if (/\{\{/.test(src)) {
+      return
+    }
+
+    this.depends.push({
+      request: src,
+      requestType,
+      $elem: elem
     })
   }
 

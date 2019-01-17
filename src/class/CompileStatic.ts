@@ -29,8 +29,11 @@ export class CompileStatic implements WxFile.Core {
       let content = util.readFile(this.request.src)
       // src => *.json = {}
       // dest => *.json.js = module.exports = {}
+      log.msg(LogType.BUILD, this.request.srcRelative)
+      log.msg(LogType.WRITE, `${this.request.destRelative}.js`)
       util.writeFile(this.request.dest + config.ext.js, `module.exports = ${content}`)
     } else {
+      log.msg(LogType.COPY, `${this.request.srcRelative} To ${this.request.destRelative}`)
       util.copyFile(this.request.src, this.request.dest)
     }
   }

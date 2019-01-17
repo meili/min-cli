@@ -343,8 +343,8 @@ export class WxSFMStyle extends WxSFM {
           // url('./iconfont.eot?t=1515059114217#iefix')
           url = matchs[1]
 
-          // Check local image
-          if (!util.checkLocalImgUrl(url)) {
+          // Check local file
+          if (!util.checkLocalFile(url)) {
             return
           }
 

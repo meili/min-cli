@@ -24,10 +24,9 @@ export namespace Global {
 
   export interface Layout {
     app: {
+      request: Request,
       template: string,
-      usingComponents: {
-        [key: string]: string
-      }
+      globalMin: WxSFMScript.GlobalMin
     }
   }
 
@@ -263,7 +262,14 @@ export class Global {
 
     let template = ''
     let appConfig = {}
-    let usingComponents = {}
+    let globalMin = {
+      config: {
+        usingComponents: {}
+      },
+      mixins: [],
+      requestDeclaration: []
+    }
+    let mixins = []
 
     if (request.src) {
       let source = fs.readFileSync(request.src, 'utf-8')
@@ -280,15 +286,16 @@ export class Global {
       })
 
       template = templateCode
-      usingComponents = wxSFMScript.getUsingComponents()
+      globalMin = wxSFMScript.getGlobalMin()
       appConfig = wxSFMScript.getConfig()
     }
 
     // 全局布局
     this.layout = {
       app: {
+        request,
         template,
-        usingComponents
+        globalMin
       }
     }
 
