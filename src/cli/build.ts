@@ -21,6 +21,22 @@ export namespace BuildCommand {
      * @memberof Options
      */
     hasPrompt?: Boolean
+
+    /**
+     * 是否清除编译后的目录
+     *
+     * @type {boolean}
+     * @memberof Options
+     */
+    clear?: boolean
+
+    /**
+     * 是否保存app.json配置
+     *
+     * @type {boolean}
+     * @memberof Options
+     */
+    isSaveAppConfig?: boolean
   }
 
   /**
@@ -30,6 +46,8 @@ export namespace BuildCommand {
    * @interface CLIOptions
    */
   export interface CLIOptions {
+    // 作为第三方工具，在已有的项目中使用
+    third?: boolean
   }
 }
 
@@ -68,8 +86,9 @@ export class BuildCommand {
    *
    */
   private async buildMinProject () {
+    let { clear, isSaveAppConfig } = this.options
     let xcx = new Xcx({
-      isClear: true,
+      isClear: clear,
       app: {
         isSFC: true
       },
@@ -78,7 +97,7 @@ export class BuildCommand {
           xcxNode.compile()
         },
         pages (pages: string[]) {
-          Global.saveAppConfig(pages)
+          isSaveAppConfig && Global.saveAppConfig(pages)
         }
       }
     })
@@ -121,7 +140,9 @@ export default {
   alias: '',
   usage: '',
   description: '编译项目',
-  options: [],
+  options: [
+    ['--third', 'As a third party，Used in existing projects']
+  ],
   on: {
     '--help': () => {
       new CLIExample('build')
@@ -129,9 +150,14 @@ export default {
         .rule('')
     }
   },
-  async action (cliOptions: BuildCommand.CLIOptions) {
+  async action (options: BuildCommand.CLIOptions) {
+    let clear = !options.third
+    let isSaveAppConfig = !options.third
+
     let buildCommand = new BuildCommand({
-      hasPrompt: true
+      hasPrompt: true,
+      clear,
+      isSaveAppConfig
     })
     await buildCommand.run()
   }

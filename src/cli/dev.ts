@@ -34,6 +34,14 @@ export namespace DevCommand {
      * @memberof Options
      */
     clear?: boolean
+
+    /**
+     * 是否保存app.json配置
+     *
+     * @type {boolean}
+     * @memberof Options
+     */
+    isSaveAppConfig?: boolean
   }
 
   /**
@@ -43,7 +51,8 @@ export namespace DevCommand {
    * @interface CLIOptions
    */
   export interface CLIOptions {
-
+    // 作为第三方工具，在已有的项目中使用
+    third?: boolean
   }
 }
 
@@ -60,7 +69,7 @@ export class DevCommand {
   }
 
   async run () {
-    let { pages, watch, clear } = this.options
+    let { pages, watch, clear, isSaveAppConfig } = this.options
 
     // TODO 此处全局污染，待优化
     Global.isDebug = !!pages && pages.length > 0
@@ -76,7 +85,7 @@ export class DevCommand {
           xcxNode.compile()
         },
         pages (pages: string[]) {
-          Global.saveAppConfig(pages)
+          isSaveAppConfig && Global.saveAppConfig(pages)
         }
       }
     })
@@ -111,7 +120,9 @@ export default {
   alias: '',
   usage: '[name]',
   description: '调试页面',
-  options: [],
+  options: [
+    ['--third', 'As a third party，Used in existing projects']
+  ],
   on: {
     '--help': () => {
       new CLIExample('dev')
@@ -124,10 +135,14 @@ export default {
   },
   async action (name: string, options: DevCommand.CLIOptions) {
     let pages = util.pageName2Pages(name)
+    let clear = !options.third
+    let isSaveAppConfig = !options.third
+
     let devCommand = new DevCommand({
       pages,
       watch: true,
-      clear: true
+      clear,
+      isSaveAppConfig
     })
     await devCommand.run()
   }

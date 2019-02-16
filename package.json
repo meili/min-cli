@@ -1,6 +1,6 @@
 {
   "name": "@mindev/min-cli",
-  "version": "1.0.8",
+  "version": "1.0.8-beta.3",
   "description": "小程序组件化开发环境，提供 cli 支持",
   "main": "lib/index.js",
   "repository": {
@@ -64,6 +64,7 @@
     "postcss-bem": "^0.4.1",
     "postcss-calc": "^5.3.1",
     "precss": "^2.0.0",
-    "standard-version": "^4.2.0"
+    "standard-version": "^4.2.0",
+    "tslib": "^1.9.0"
   }
 }
