@@ -1,6 +1,6 @@
 {
   "name": "@mindev/min-cli",
-  "version": "1.0.8-beta.3",
+  "version": "1.0.9-beta.1",
   "description": "小程序组件化开发环境，提供 cli 支持",
   "main": "lib/index.js",
   "repository": {

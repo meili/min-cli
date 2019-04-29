@@ -462,6 +462,11 @@ export function src2destRelative (srcRelative: string, isPublish?: boolean) {
   // let ext = path.extname(srcRelative)
   let destRelative = srcRelative
 
+  if (['min.config.json', 'min.config.js'].indexOf(destRelative) !== -1) {
+    // MinConfig 配置文件最终都编译到dist目录下
+    destRelative = `src/${destRelative}`
+  }
+
   if (!isPublish) {
     // source => dist
     destRelative = destRelative.replace(new RegExp(`^${config.src}`), config.dest)
