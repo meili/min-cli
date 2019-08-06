@@ -57,7 +57,7 @@ function getMdRootWxpRequestPath (request: string) {
   let extName = path.extname(srcRelative)
   let baseName = path.basename(srcRelative)
   let dirName = path.dirname(srcRelative)
-  let packageRegExp = new RegExp(`^${config.packages}\\${path.sep}${config.prefixStr}([a-z-]+)$`)
+  let packageRegExp = new RegExp(`^${config.packages}(\\${path.sep}([a-zA-Z]+)|)\\${path.sep}${config.prefixStr}([a-z-]+)$`)
 
   let mdRootWxpPath = ''
   if (
@@ -72,7 +72,8 @@ function getMdRootWxpRequestPath (request: string) {
     // packages/wxc-name/README.md
     (baseName.toLowerCase() === 'readme.md' && packageRegExp.test(dirName))) {
     let matchs = dirName.match(packageRegExp)
-    let pageName = matchs && matchs.length > 1 ? matchs[1] : ''
+    // matchs[2] => packA; matchs[3] => elip
+    let pageName = matchs && matchs.length === 4 ? [matchs[2], matchs[3]].join(path.sep) : ''
     // ~/you_project/src/pages/name/index.wxp
     mdRootWxpPath = config.getPath('pages', pageName, `index${config.ext.wxp}`)
     // console.log('readme更改后，父级路径：', mdRootWxpPath)
