@@ -247,7 +247,7 @@ function findPath (request: string, requestType: RequestType, paths: string[], e
   // For each path
   for (let i = 0; i < paths.length; i++) {
     let curPath = paths[i]
-    let curRequest = request
+    let curRequest: string | string[] = request
 
     if (!curPath || !getStat(curPath).isDir) {
       continue
@@ -289,7 +289,22 @@ function findPath (request: string, requestType: RequestType, paths: string[], e
     if (curPath === config.cwd) {
       let alias = getAlias(curRequest)
       if (alias) {
-        curRequest = curRequest.replace(alias.name, alias.value)
+        // alias.name === @minui && alias.value === 'packages'
+        if (alias.name === config.npm.scope && alias.value === config.packages) {
+          const packagesPath = path.join(config.cwd, config.packages)
+          const packagesChildPaths = (fs.readdirSync(packagesPath) || [])
+          .filter(item => item.indexOf('.') !== 0)
+          .filter(item => !new RegExp(`^${config.prefix}`).test(item))
+
+          curRequest = [
+            curRequest.replace(alias.name, alias.value),
+            ...packagesChildPaths.map(childPath => {
+              return (curRequest as string).replace(alias.name, path.join(alias.value, childPath))
+            })
+          ]
+        } else {
+          curRequest = curRequest.replace(alias.name, alias.value)
+        }
         // let spes = curRequest.split('/')
         // spes.shift()
         // spes.unshift(alias.value)
@@ -298,61 +313,36 @@ function findPath (request: string, requestType: RequestType, paths: string[], e
         // request = '@scope/wxc-hello/src/index' => 'source/packages/wxc-hello/src/index'
         // curRequest = spes.join('/')
       }
-    }
+    } else {
+      // TODO 简陋版
+      // 支持 package.json 的 browser
+      let curPathPkgPath = path.join(curPath, 'package.json')
+      if (/node_modules\//.test(curPath) && fs.existsSync(curPathPkgPath)) {
+        let { browser = {} } = fs.readJSONSync(curPathPkgPath)
 
-    // TODO 简陋版
-    // 支持 package.json 的 browser
-    let curPathPkgPath = path.join(curPath, 'package.json')
-    if (/node_modules\//.test(curPath) && fs.existsSync(curPathPkgPath)) {
-      let { browser = {} } = fs.readJSONSync(curPathPkgPath)
-
-      for (const key in browser) {
-        let aPath = supExtName(path.join(curPath, key))
-        let bPath = supExtName(path.join(curPath, curRequest))
-        if (aPath === bPath) {
-          curRequest = browser[key]
+        for (const key in browser) {
+          let aPath = supExtName(path.join(curPath, key))
+          let bPath = supExtName(path.join(curPath, curRequest as string))
+          if (aPath === bPath) {
+            curRequest = browser[key]
+          }
         }
       }
     }
 
-    let basePath = path.resolve(curPath, curRequest)
-
-    // Resolve ID
-    if (config.resolveId) {
-      // node_modules/@minui/wxc-loading/config.js
-      let relativePath = path.relative(config.cwd, basePath)
-      // dist/config.js
-      let resolvePath = config.resolveId[relativePath]
-      if (resolvePath) {
-        // ~/cwd/dist/config.js
-        basePath = path.join(config.cwd, resolvePath)
-      }
+    let curRequests: string[] = []
+    if (typeof curRequest === 'string') {
+      curRequests = [curRequest]
+    } else {
+      curRequests = curRequest
     }
 
-    let filename
-    let stat = getStat(basePath)
-
-    // index or index.js
-    if (!trailingSlash) {
-      if (stat.isFile) { // File.
-        filename = basePath
-      } else if (stat.isDir) { // Directory.
-        filename = tryPackage(basePath, exts)
+    let filename = null
+    for (const curRequest of curRequests) {
+      filename = findPathFile(curPath, curRequest, exts, trailingSlash)
+      if (filename) {
+        break
       }
-
-      if (!filename) {
-        // try it with each of the extensions
-        filename = tryExtensions(basePath, exts)
-      }
-    }
-
-    if (!filename && stat.isDir) {  // Directory.
-      filename = tryPackage(basePath, exts)
-    }
-
-    if (!filename && stat.isDir) {  // Directory.
-      // try it with each of the extensions at "index"
-      filename = tryExtensions(path.resolve(basePath, 'index'), exts)
     }
 
     if (filename) {
@@ -361,6 +351,50 @@ function findPath (request: string, requestType: RequestType, paths: string[], e
     }
   }
   return false
+}
+
+function findPathFile (curPath, curRequest, exts, trailingSlash) {
+  let basePath = path.resolve(curPath, curRequest)
+
+  // Resolve ID
+  if (config.resolveId) {
+    // node_modules/@minui/wxc-loading/config.js
+    let relativePath = path.relative(config.cwd, basePath)
+    // dist/config.js
+    let resolvePath = config.resolveId[relativePath]
+    if (resolvePath) {
+      // ~/cwd/dist/config.js
+      basePath = path.join(config.cwd, resolvePath)
+    }
+  }
+
+  let filename
+  let stat = getStat(basePath)
+
+  // index or index.js
+  if (!trailingSlash) {
+    if (stat.isFile) { // File.
+      filename = basePath
+    } else if (stat.isDir) { // Directory.
+      filename = tryPackage(basePath, exts)
+    }
+
+    if (!filename) {
+      // try it with each of the extensions
+      filename = tryExtensions(basePath, exts)
+    }
+  }
+
+  if (!filename && stat.isDir) {  // Directory.
+    filename = tryPackage(basePath, exts)
+  }
+
+  if (!filename && stat.isDir) {  // Directory.
+    // try it with each of the extensions at "index"
+    filename = tryExtensions(path.resolve(basePath, 'index'), exts)
+  }
+
+  return filename
 }
 
 /**
