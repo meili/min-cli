@@ -27,6 +27,7 @@ declare const _default: ({
         '--help': () => void;
     };
     action(name: string, options: DevCommand.CLIOptions): Promise<void>;
+    actionThird(): Promise<void>;
 } | {
     name: string;
     alias: string;
@@ -37,5 +38,7 @@ declare const _default: ({
         '--help': () => void;
     };
     action(options: BuildCommand.CLIOptions): Promise<void>;
+    actionThird(): Promise<void>;
+    actionOnlyBuildWxc(): Promise<void>;
 })[];
 export default _default;

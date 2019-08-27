@@ -292,7 +292,7 @@ function findPath (request: string, requestType: RequestType, paths: string[], e
         // alias.name === @minui && alias.value === 'packages'
         if (alias.name === config.npm.scope && alias.value === config.packages) {
           const packagesPath = path.join(config.cwd, config.packages)
-          const packagesChildPaths = (fs.readdirSync(packagesPath) || [])
+          const packagesChildPaths = (fs.existsSync(packagesPath) && fs.readdirSync(packagesPath) || [])
           .filter(item => item.indexOf('.') !== 0)
           .filter(item => !new RegExp(`^${config.prefix}`).test(item))
 
@@ -492,7 +492,7 @@ function resolveLookupPaths (request: string, parent?: string): string[] {
   ]
 }
 
-export function src2destRelative (srcRelative: string, isPublish?: boolean) {
+export function src2destRelative (srcRelative: string, isPublish?: boolean, xcxPackageName?: string) {
   // let ext = path.extname(srcRelative)
   let destRelative = srcRelative
 
@@ -537,6 +537,13 @@ export function src2destRelative (srcRelative: string, isPublish?: boolean) {
     }
     return match
   })
+
+  let paths = destRelative.split(path.sep)
+  if (xcxPackageName && paths[1] !== 'pages') {
+    paths.splice(1, 0, xcxPackageName)
+    destRelative = paths.join(path.sep)
+  }
+
   return destRelative
 }
 
@@ -547,7 +554,8 @@ export function resolveDep (requestOptions: Request.Options): Request.Core {
     parent,
     isMain,
     isPublish,
-    isThreeNpm = false
+    isThreeNpm = false,
+    xcxPackageName = ''
   } = requestOptions
 
   if (!request && !parent) {
@@ -591,7 +599,7 @@ export function resolveDep (requestOptions: Request.Options): Request.Core {
   if (src) {
     srcRelative = path.relative(config.cwd, src)
     ext = path.extname(src)
-    destRelative = src2destRelative(srcRelative, isPublish)
+    destRelative = src2destRelative(srcRelative, isPublish, xcxPackageName)
     dest = path.join(config.cwd, destRelative)
 
     // 判定是否来自第三方NPM（NPM包中非WXC的都定位为第三方NPM包，主要是不走编译）
@@ -616,6 +624,7 @@ export function resolveDep (requestOptions: Request.Options): Request.Core {
     dest,
     destRelative,
 
-    isThreeNpm: $isThreeNpm
+    isThreeNpm: $isThreeNpm,
+    xcxPackageName
   }
 }

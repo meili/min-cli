@@ -260,6 +260,19 @@ export function pageName2Pages (name: string | string[] = []) {
   return pages
 }
 
+export function getThirdWxpPages () {
+  const appJson = fs.readJsonSync(config.getPath('src', 'app.json'))
+  const { pages = [], subPackages = [] } = appJson
+  const subPackagesPages = subPackages.map(({root, pages}) => {
+    return pages.map(page => `${path.join(root, page)}?package=${root}`)
+  })
+
+  return [].concat.apply([...pages], subPackagesPages).filter((page) => {
+    const pagePath = page.split('?')[0]
+    return path.basename(pagePath) === 'index'
+  })
+}
+
 export function checkLocalFile (url: string) {
   if (url.indexOf(';base64,') !== -1) {
     return false

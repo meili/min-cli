@@ -15,8 +15,10 @@ type GetPathType = 'file' | 'src' | 'dest' | 'pages' | 'packages' | 'cache.file'
  */
 const CUSTOM_CONFIG_MEMBER: string[] = [
   'style',
+  'onlyBuildWxcList',
   'compilers', // 编译器
   'src', // 源代码的路径
+  'package',
   'packages', // 组件库的路径
   'dest',// 编译后的路径
   'alias', // 别名，如components => src/components
@@ -68,7 +70,7 @@ function getCustomConfig (cwd: string = systemConfig.cwd): { [key: string]: Cust
         jsConfig = require(jsConfigFilePath)
         customConfigFromFile = _.pick(jsConfig, CUSTOM_CONFIG_MEMBER) as CustomConfig
       } catch (error) {
-        console.error('fail: read config file from min.config.js', error);
+        console.error('fail: read config file from min.config.js', error)
       }
     }
   }

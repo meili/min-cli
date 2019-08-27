@@ -48,6 +48,9 @@ export namespace BuildCommand {
   export interface CLIOptions {
     // 作为第三方工具，在已有的项目中使用
     third?: boolean
+
+    // third 前提下，仅编译wxc组件
+    onlyBuildWxc?: boolean
   }
 }
 
@@ -141,7 +144,8 @@ export default {
   usage: '',
   description: '编译项目',
   options: [
-    ['--third', 'As a third party，Used in existing projects']
+    ['--third', 'As a third party，Used in existing projects'],
+    ['--onlyBuildWxc', 'As a third party，only build wxc components']
   ],
   on: {
     '--help': () => {
@@ -151,14 +155,44 @@ export default {
     }
   },
   async action (options: BuildCommand.CLIOptions) {
-    let clear = !options.third
-    let isSaveAppConfig = !options.third
+    if (options.third) {
+      if (options.onlyBuildWxc) {
+        this.actionOnlyBuildWxc()
+        return
+      }
+      this.actionThird()
+      return
+    }
 
     let buildCommand = new BuildCommand({
       hasPrompt: true,
-      clear,
-      isSaveAppConfig
+      clear: true,
+      isSaveAppConfig: true
     })
     await buildCommand.run()
+  },
+
+  async actionThird () {
+    let pages = util.getThirdWxpPages()
+
+    let xcx = new Xcx({
+      pages,
+      traverse: {
+        enter (xcxNode: XcxNode) {
+          xcxNode.compile()
+        }
+      }
+    })
+    xcx.compileThird()
+  },
+  async actionOnlyBuildWxc () {
+    let pkgNames: string[] = config.onlyBuildWxcList
+
+    if (pkgNames.length === 0) {
+      log.error(`Min Build，没有需要编译的组件`)
+      return
+    }
+
+    util.buildNpmWXCs(pkgNames)
   }
 }

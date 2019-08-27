@@ -3,6 +3,7 @@ import * as path from 'path'
 import * as glob from 'glob'
 import * as _ from 'lodash'
 import * as chokidar from 'chokidar'
+import * as qs from 'querystring'
 import { XcxNode, XcxTraverse } from '../class'
 import { config, log, LogType, xcxNext, xcxNodeCache, Global } from '../util'
 
@@ -127,6 +128,15 @@ export class Xcx {
     this.appCompile()
     this.pagesCompile()
     this.imagesCompile()
+  }
+
+  compileThird (isFromWatch?: Boolean) {
+    log.newline()
+    this.clear(isFromWatch)
+    // this.copyProjectConfig()
+    // this.appCompile()
+    this.pagesCompileThird()
+    // this.imagesCompile()
   }
 
   /**
@@ -335,6 +345,49 @@ export class Xcx {
         isGlob: true
       }]
     }
+
+    this.transfromFromEntry(xcxEntry)
+  }
+
+  private pagesCompileThird () {
+    /**
+     * [
+     *    pages/hello/index,
+     *    pages/world/index
+     * ]
+     */
+    let pages: string[] = this.options.pages || []
+    if (pages.length === 0) {
+      pages = Global.appPages || []
+    }
+    let xcxEntry: Xcx.Entry[] = []
+    let pageFiles: string[] = []
+
+    /**
+     * [
+     *    pages/hello/index.wxp,
+     *    pages/world/index.wxp
+     * ]
+     */
+    pageFiles = [...pageFiles, ...pages.map(page => {
+      const [pagePath, pageQuery = ''] = page.split('?')
+      return `${pagePath}${config.ext.wxp}?${pageQuery}`
+    })]
+
+    // 去重
+    pageFiles = _.uniq(pageFiles)
+
+    xcxEntry = [...xcxEntry, ...pageFiles.map(pageFile => {
+      const [pageRequest, pageQuery = ''] = pageFile.split('?')
+      const { package: xcxPackageName = '' } = qs.parse(pageQuery) as { [key: string]: string }
+
+      return {
+        request: pageRequest,
+        parent: config.getPath('src'),
+        isMain: true,
+        xcxPackageName
+      }
+    })]
 
     this.transfromFromEntry(xcxEntry)
   }

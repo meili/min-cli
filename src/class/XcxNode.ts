@@ -138,7 +138,7 @@ export class XcxNode {
       return null
     }
 
-    let xcxNode = xcxNodeCache.get(request.src)
+    let xcxNode = xcxNodeCache.get(request.src, request.xcxPackageName)
     if (isForce || !xcxNode) {
       xcxNode = new XcxNode(request, root)
     }
@@ -165,7 +165,8 @@ export class XcxNode {
    * @memberof XcxNode
    */
   private cached () {
-    xcxNodeCache.set(this.request.src, this)
+    const { request } = this
+    xcxNodeCache.set(request.src, this, request.xcxPackageName)
   }
 
   /**
@@ -195,7 +196,8 @@ export class XcxNode {
         parent: this.request.src,
         isMain: false,
         root: this,
-        isThreeNpm: this.request.isThreeNpm
+        isThreeNpm: this.request.isThreeNpm,
+        xcxPackageName: this.request.xcxPackageName
       })
 
       if (!xcxNode) {
@@ -214,7 +216,8 @@ export class XcxNode {
           ext: xcxNode.request.ext,
           dest: xcxNode.request.dest,
           destRelative: xcxNode.request.destRelative,
-          isThreeNpm: xcxNode.request.isThreeNpm
+          isThreeNpm: xcxNode.request.isThreeNpm,
+          xcxPackageName: xcxNode.request.xcxPackageName
         })
       }
     }

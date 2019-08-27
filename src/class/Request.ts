@@ -59,6 +59,14 @@ export namespace Request {
      * @memberof Options
      */
     isThreeNpm?: boolean
+
+    /**
+     * 小程序分包名称
+     *
+     * @type {string}
+     * @memberof Options
+     */
+    xcxPackageName?: string
   }
 
   /**
@@ -148,6 +156,14 @@ export namespace Request {
      * @memberof Core
      */
     isThreeNpm: boolean
+
+    /**
+     * 小程序分包名称
+     *
+     * @type {string}
+     * @memberof Options
+     */
+    xcxPackageName?: string
   }
 
   /**
@@ -380,6 +396,14 @@ export class RequestCore implements Request.Core {
    * @memberof RequestCore
    */
   isThreeNpm: boolean
+
+  /**
+   * 小程序分包名称
+   *
+   * @type {string}
+   * @memberof Options
+   */
+  xcxPackageName?: string
 
   /**
    * Creates an instance of RequestCore.

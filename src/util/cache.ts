@@ -90,11 +90,17 @@ function getMdRootWxpRequestPath (request: string) {
 
 export const xcxNodeCache = {
   cached: {},
-  set (request: string, xcxNode: XcxNode): void {
-    this.cached[request] = xcxNode
+  set (request: string, xcxNode: XcxNode, xcxPackageName: string = ''): void {
+    const key = xcxPackageName
+      ? [xcxPackageName, request].join('__')
+      : request
+    this.cached[key] = xcxNode
   },
-  get (request: string): XcxNode | null {
-    return this.cached[request] || null
+  get (request: string, xcxPackageName: string = ''): XcxNode | null {
+    const key = xcxPackageName
+      ? [xcxPackageName, request].join('__')
+      : request
+    return this.cached[request] || this.cached[key] || null
   },
   getBeDepends (request: string): string[] {
     let beDepends: string[] = []

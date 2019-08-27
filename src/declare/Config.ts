@@ -122,6 +122,7 @@ export interface Config extends CustomConfig {
       rule: string
     }
   }
+  onlyBuildWxcList: string[]
   log: {
     verbose: boolean // 显示详细信息
     time: boolean // 显示时间

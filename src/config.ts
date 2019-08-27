@@ -108,6 +108,7 @@ const config: Config = {
       rule: ''
     }
   },
+  onlyBuildWxcList: [],
   log: {
     verbose: true, // 显示详细信息
     time: true, // 显示时间

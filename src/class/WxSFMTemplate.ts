@@ -255,6 +255,9 @@ export class WxSFMTemplate extends WxSFM {
       if (!src) {
         return
       }
+      if (/\{\{/.test(src)) {
+        return
+      }
       let extName = path.extname(src)
       switch (extName) {
         case config.ext.png:

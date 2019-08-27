@@ -53,6 +53,9 @@ export namespace DevCommand {
   export interface CLIOptions {
     // 作为第三方工具，在已有的项目中使用
     third?: boolean
+
+    // third 前提下，仅编译wxc组件
+    onlyBuildWxc?: boolean
   }
 }
 
@@ -71,7 +74,6 @@ export class DevCommand {
   async run () {
     let { pages, watch, clear, isSaveAppConfig } = this.options
 
-    // TODO 此处全局污染，待优化
     Global.isDebug = !!pages && pages.length > 0
 
     let xcx = new Xcx({
@@ -121,7 +123,8 @@ export default {
   usage: '[name]',
   description: '调试页面',
   options: [
-    ['--third', 'As a third party，Used in existing projects']
+    ['--third', 'As a third party，Used in existing projects'],
+    ['--onlyBuildWxc', 'As a third party，only build wxc components']
   ],
   on: {
     '--help': () => {
@@ -134,16 +137,35 @@ export default {
     }
   },
   async action (name: string, options: DevCommand.CLIOptions) {
-    let pages = util.pageName2Pages(name)
-    let clear = !options.third
-    let isSaveAppConfig = !options.third
 
+    if (options.third) {
+      this.actionThird()
+      return
+    }
+
+    let pages = util.pageName2Pages(name)
     let devCommand = new DevCommand({
       pages,
       watch: true,
-      clear,
-      isSaveAppConfig
+      clear: true,
+      isSaveAppConfig: true
     })
     await devCommand.run()
+  },
+
+  async actionThird () {
+    let pages = util.getThirdWxpPages()
+    Global.isDebug = !!pages && pages.length > 0
+
+    let xcx = new Xcx({
+      pages,
+      traverse: {
+        enter (xcxNode: XcxNode) {
+          xcxNode.compile()
+        }
+      }
+    })
+    xcx.compileThird()
+    this.watcher = xcx.watch()
   }
 }

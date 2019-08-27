@@ -201,8 +201,14 @@ export class Global {
    * @memberof Global
    */
   private setConfig () {
-    let file = path.join(config.cwd, config.filename)
-    let configData = fs.existsSync(file) ? fs.readJsonSync(file) : {}
+    let fileJsonPath = path.join(config.cwd, 'min.config.json')
+    let fileJsPath = path.join(config.cwd, 'min.config.js')
+    let configData = fs.existsSync(fileJsonPath)
+      ? fs.readJsonSync(fileJsonPath)
+      : fileJsPath
+        ? require(fileJsPath)
+        : {}
+
     let { style: styleConfig = {} } = configData
     let lessCode = this.generateStyleVariables(styleConfig, 'Less')
     let pcssCode = this.generateStyleVariables(styleConfig, 'Pcss')
