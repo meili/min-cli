@@ -64,6 +64,6 @@
     "postcss-bem": "^0.4.1",
     "postcss-calc": "^5.3.1",
     "precss": "^2.0.0",
-    "standard-version": "^4.2.0"
+    "standard-version": "^8.0.1"
   }
 }
